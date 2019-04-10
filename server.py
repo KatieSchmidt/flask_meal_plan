@@ -2,6 +2,7 @@ from pymongo import MongoClient
 from flask import request
 from flask import Flask
 from bson.json_util import dumps
+import bson
 import datetime
 import pprint
 
@@ -16,8 +17,12 @@ app = Flask(__name__)
 @app.route('/meals', methods=["POST"])
 def create_meal():
     new_meal = {
-        "meal_name": request.form.get('meal_name'),
-        "user": request.form.get("user")
+        "ID": bson.objectid.ObjectId(),
+        "username": request.form.get("username"),
+        "mealname": request.form.get('mealname'),
+        "totalcalories": 0,
+        "ingredients": [],
+        "dateadded": datetime.datetime.now()
     }
     meal_id = meals.insert_one(new_meal).inserted_id
     return dumps(meals.find_one({"_id": meal_id}))
