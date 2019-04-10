@@ -80,3 +80,14 @@ def remove_ingredient_from_meal(meal_id, ing_id):
 
     meals.replace_one(meal_filter, meal)
     return dumps(meal)
+
+
+@app.route('/meals/<meal_id>', methods=["DELETE"])
+def delete_meal_by_id(meal_id):
+    meal_filter = {"_id": ObjectId(meal_id)}
+
+    delete_result = meals.delete_one(meal_filter)
+    if delete_result.deleted_count == 0:
+        return "deletion failed"
+    else:
+        return "deletion successful"
