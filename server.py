@@ -45,7 +45,7 @@ def get_meal_by_id(meal_id):
     return dumps(meal)
 
 
-@app.route('/meals/<meal_id>/', methods=["POST"])
+@app.route('/meals/<meal_id>/', methods=["PUT"])
 def add_ingredient_to_meal(meal_id):
     print(meal_id)
     filter = {"_id": ObjectId(meal_id)}
@@ -57,12 +57,26 @@ def add_ingredient_to_meal(meal_id):
         "measureunit": request.form.get("measureunit"),
         "measureunitquantity": request.form.get("measureunitquantity")
     }
-    print(meal["ingredients"])
-    print(meal["totalcalories"])
-    print(ingredient["totalcalories"])
-    print(type(meal["ingredients"]))
     meal["ingredients"].append(ingredient)
     meal["totalcalories"] += float(ingredient["totalcalories"])
 
     meals.replace_one(filter, meal)
+    return dumps(meal)
+
+
+@app.route('/meals/<meal_id>/remove/<ing_id>', methods=["PUT"])
+def remove_ingredient_from_meal(meal_id, ing_id):
+    meal_filter = {"_id": ObjectId(meal_id)}
+    ing_filter = {"id": ObjectId(ing_id)}
+    meal = meals.find_one(meal_filter)
+
+    cals = 0
+    for i in meal["ingredients"]:
+        if i["id"] == ObjectId(ing_id):
+            cals = i["totalcalories"]
+            meal["ingredients"].remove(i)
+            break
+    meal["totalcalories"] -= float(cals)
+
+    meals.replace_one(meal_filter, meal)
     return dumps(meal)
