@@ -188,12 +188,21 @@ def delete_mealplan_by_id(mealplan_id):
 
 # grocery list routes
 @app.route('/grocerylists', methods=["GET"])
-def get_groceryliss():
+def get_grocerylists():
     grocerylist = grocerylists.find()
     if grocerylist != None:
         return dumps(grocerylist), 200
     else:
         return "Grocery list not found", 404
+
+@app.route('/grocerylists/<grocerylist_id>', methods=["GET"])
+def get_grocerylist_by_id(grocerylist_id):
+    grocerylist = grocerylists.find_one({"_id": ObjectId(grocerylist_id)})
+    if grocerylist != None:
+        return dumps(grocerylist), 200
+    else:
+        return "Grocery list not found", 404
+
 
 @app.route('/grocerylists/<mealplan_id>', methods=["POST"])
 def create_grocery_list(mealplan_id):
@@ -236,16 +245,10 @@ def create_grocery_list(mealplan_id):
     else:
         return "Mealplan not found, cant make grocery list", 404
 
-@app.route('/grocerylists/<grocerylist_id>/', methods=["GET"])
-def get_grocerylist_by_id(grocerylist_id):
-    grocerylist = grocerylists.find_one({"_id": ObjectId(grocerylist_id)})
-    if grocerylist != None:
-        return dumps(grocerylist), 200
-    else:
-        return "Grocery list not found", 404
-# 
-#
-# @app.route('/grocerylists/<grocerylist_id>/', methods=["PUT"])
+
+
+
+# @app.route('/grocerylists/<grocerylist_id>/', methods=["GET"])
 # def remove_grocery_item_from_list(grocerylist_id):
 #     grocerylist = grocerylists.find_one({"_id": ObjectId(grocerylist_id)})
 #     if grocerylist != None:
@@ -253,10 +256,12 @@ def get_grocerylist_by_id(grocerylist_id):
 #     else:
 #         return "Grocery list not found", 404
 
-# @app.route('/grocerylists/<grocerylist_id>/', methods=["DELETE"])
-# def delete_grocerylist_by_id(grocerylist_id):
-#     grocerylist = grocerylists.find_one({"_id": ObjectId(grocerylist_id)})
-#     if grocerylist != None:
-#         return dumps(grocerylist), 200
-#     else:
-#         return "Grocery list not found", 404
+@app.route('/grocerylists/<grocerylist_id>', methods=["DELETE"])
+def delete_grocerylist_by_id(grocerylist_id):
+    grocerylist_filter = {"_id": ObjectId(grocerylist_id)}
+
+    delete_result = grocerylists.delete_one(grocerylist_filter)
+    if delete_result.deleted_count == 0:
+        return "deletion failed", 404
+    else:
+        return "deletion successful", 200
