@@ -226,6 +226,8 @@ def create_grocery_list(mealplan_id):
                             "measureunitquantity": float(ingredient["measureunitquantity"])
                         }
                         grocerylist.append(temp_item)
+
+
                 else:
                     print("grocery list empty creating first item")
                     temp_item = {
@@ -234,27 +236,33 @@ def create_grocery_list(mealplan_id):
                     }
                     grocerylist.append(temp_item)
 
-        index = 0
         grocerydict = dict()
         for item in grocerylist:
-            grocerydict[str(index)] = item
-            index += 1
+            grocerydict[item["ingredient"]] = item["measureunitquantity"]
 
         grocery_id = grocerylists.insert_one(grocerydict).inserted_id
         return dumps(grocerylists.find_one({"_id": grocery_id})), 200
     else:
         return "Mealplan not found, cant make grocery list", 404
 
+@app.route('/grocerylists/<grocerylist_id>/<itemname>', methods=["PUT"])
+def remove_grocery_item_from_list(grocerylist_id, itemname):
+    list_filter = {"_id": ObjectId(grocerylist_id)}
+    grocerylist = grocerylists.find_one(list_filter)
 
+    if grocerylist != None:
+        removed_value = grocerylist.pop(itemname, None)
+        print(removed_value)
+        print(grocerylist)
 
+        result = grocerylists.replace_one(list_filter, grocerylist)
 
-# @app.route('/grocerylists/<grocerylist_id>/', methods=["GET"])
-# def remove_grocery_item_from_list(grocerylist_id):
-#     grocerylist = grocerylists.find_one({"_id": ObjectId(grocerylist_id)})
-#     if grocerylist != None:
-#         return dumps(grocerylist), 200
-#     else:
-#         return "Grocery list not found", 404
+        if result.matched_count == 0:
+            return "no items deleted", 404
+        else:
+            return dumps(grocerylist), 200
+    else:
+        return "Grocery list not found", 404
 
 @app.route('/grocerylists/<grocerylist_id>', methods=["DELETE"])
 def delete_grocerylist_by_id(grocerylist_id):
