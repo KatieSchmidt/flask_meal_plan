@@ -187,6 +187,14 @@ def delete_mealplan_by_id(mealplan_id):
         return "deletion successful", 200
 
 # grocery list routes
+@app.route('/grocerylists', methods=["GET"])
+def get_groceryliss():
+    grocerylist = grocerylists.find()
+    if grocerylist != None:
+        return dumps(grocerylist), 200
+    else:
+        return "Grocery list not found", 404
+
 @app.route('/grocerylists/<mealplan_id>', methods=["POST"])
 def create_grocery_list(mealplan_id):
     mealplan_filter = {"_id": ObjectId(mealplan_id)}
@@ -235,3 +243,20 @@ def get_grocerylist_by_id(grocerylist_id):
         return dumps(grocerylist), 200
     else:
         return "Grocery list not found", 404
+# 
+#
+# @app.route('/grocerylists/<grocerylist_id>/', methods=["PUT"])
+# def remove_grocery_item_from_list(grocerylist_id):
+#     grocerylist = grocerylists.find_one({"_id": ObjectId(grocerylist_id)})
+#     if grocerylist != None:
+#         return dumps(grocerylist), 200
+#     else:
+#         return "Grocery list not found", 404
+
+# @app.route('/grocerylists/<grocerylist_id>/', methods=["DELETE"])
+# def delete_grocerylist_by_id(grocerylist_id):
+#     grocerylist = grocerylists.find_one({"_id": ObjectId(grocerylist_id)})
+#     if grocerylist != None:
+#         return dumps(grocerylist), 200
+#     else:
+#         return "Grocery list not found", 404
