@@ -10,6 +10,7 @@ DATABASE = MongoClient('localhost', 27017)["go_meals"]
 
 meals = DATABASE.meals
 mealplans = DATABASE.mealplans
+grocerylists = DATABASE.grocerylists
 
 # flask config
 app = Flask(__name__)
@@ -55,7 +56,7 @@ def add_ingredient_to_meal(meal_id):
     ingredient = {
         "id": ObjectId(),
         "ingredient": request.form.get("ingredient"),
-        "totalcalories": request.form.get("calories"),
+        "totalcalories": request.form.get("totalcalories"),
         "measureunit": request.form.get("measureunit"),
         "measureunitquantity": request.form.get("measureunitquantity")
     }
@@ -184,3 +185,45 @@ def delete_mealplan_by_id(mealplan_id):
         return "deletion failed", 404
     else:
         return "deletion successful", 200
+
+# grocery list routes
+@app.route('/grocerylist/<mealplan_id>', methods=["GET"])
+def create_grocery_list(mealplan_id):
+    mealplan_filter = {"_id": ObjectId(mealplan_id)}
+    mealplan = mealplans.find_one(mealplan_filter)
+    if mealplan != None:
+        grocerylist = list()
+        for meal in mealplan["meals"]:
+            for ingredient in meal["ingredients"]:
+                inserted = False
+                if len(grocerylist) > 0:
+                    for item in grocerylist:
+                        if item["ingredient"].lower() == ingredient["ingredient"].lower():
+                            item["measureunitquantity"] += float(
+                                ingredient["measureunitquantity"])
+                            inserted = True
+                            break
+                    if inserted == False:
+                        temp_item = {
+                            "ingredient": ingredient["ingredient"],
+                            "measureunitquantity": float(ingredient["measureunitquantity"])
+                        }
+                        grocerylist.append(temp_item)
+                else:
+                    print("grocery list empty creating first item")
+                    temp_item = {
+                        "ingredient": ingredient["ingredient"],
+                        "measureunitquantity": float(ingredient["measureunitquantity"])
+                    }
+                    grocerylist.append(temp_item)
+
+        index = 0
+        grocerydict = dict()
+        for item in grocerylist:
+            grocerydict[str(index)] = item
+            index += 1
+
+        grocery_id = grocerylists.insert_one(grocerydict).inserted_id
+        return dumps(grocerylists.find_one({"_id": grocery_id})), 200
+    else:
+        return "Mealplan not found, cant make grocery list", 404
