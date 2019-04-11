@@ -15,6 +15,7 @@ mealplans = DATABASE.mealplans
 app = Flask(__name__)
 
 
+# meal routes
 @app.route('/meals', methods=["POST"])
 def create_meal():
     new_meal = {
@@ -40,7 +41,6 @@ def get_meals():
 
 @app.route('/meals/<meal_id>/', methods=["GET"])
 def get_meal_by_id(meal_id):
-    print(meal_id)
     meal = meals.find_one({"_id": ObjectId(meal_id)})
     if meal != None:
         return dumps(meal), 200
@@ -50,7 +50,6 @@ def get_meal_by_id(meal_id):
 
 @app.route('/meals/<meal_id>/', methods=["PUT"])
 def add_ingredient_to_meal(meal_id):
-    print(meal_id)
     filter = {"_id": ObjectId(meal_id)}
     meal = meals.find_one(filter)
     ingredient = {
@@ -96,6 +95,91 @@ def delete_meal_by_id(meal_id):
     meal_filter = {"_id": ObjectId(meal_id)}
 
     delete_result = meals.delete_one(meal_filter)
+    if delete_result.deleted_count == 0:
+        return "deletion failed", 404
+    else:
+        return "deletion successful", 200
+
+# meaplan routes
+
+
+@app.route('/mealplans', methods=["POST"])
+def create_mealplan():
+    new_mealplan = {
+        "userid": ObjectId(request.form.get("userid")),
+        "planname": request.form.get('planname'),
+        "totalcalories": float(0),
+        "meals": list(),
+        "dateadded": datetime.datetime.now()
+    }
+    mealplan_id = mealplans.insert_one(new_mealplan).inserted_id
+    return dumps(mealplans.find_one({"_id": mealplan_id})), 200
+
+
+@app.route('/mealplans', methods=["GET"])
+def get_mealplans():
+    all_mealplans = mealplans.find()
+    if all_mealplans.count() > 0:
+        return dumps(mealplans.find()), 200
+    else:
+        return "Error: No mealplans found", 404
+
+
+@app.route('/mealplans/<mealplan_id>/', methods=["GET"])
+def get_mealplan_by_id(mealplan_id):
+    mealplan = mealplans.find_one({"_id": ObjectId(mealplan_id)})
+    if mealplan != None:
+        return dumps(mealplan), 200
+    else:
+        return "Mealplan not found", 404
+
+
+@app.route('/mealplans/<mealplan_id>/<meal_id>', methods=["PUT"])
+def add_meal_to_mealplan(mealplan_id, meal_id):
+    mealplan_filter = {"_id": ObjectId(mealplan_id)}
+    meal_filter = {"_id": ObjectId(meal_id)}
+    mealplan = mealplans.find_one(mealplan_filter)
+    if mealplan != None:
+        meal = meals.find_one(meal_filter)
+        if meal != None:
+            mealplan["meals"].append(meal)
+            mealplan["totalcalories"] += float(meal["totalcalories"])
+
+            result = mealplans.replace_one(mealplan_filter, mealplan)
+            if result.matched_count == 0:
+                return "no meal added", 404
+            else:
+                return dumps(mealplan), 200
+
+
+@app.route('/mealplans/<mealplan_id>/remove/<meal_id>', methods=["PUT"])
+def remove_meal_from_mealplan(mealplan_id, meal_id):
+    mealplan_filter = {"_id": ObjectId(mealplan_id)}
+    meal_filter = {"_id": ObjectId(meal_id)}
+
+    mealplan = mealplans.find_one(mealplan_filter)
+    if mealplan != None:
+        meal = meals.find_one(meal_filter)
+        if meal != None:
+            mealplan["totalcalories"] -= float(meal["totalcalories"])
+            mealplan["meals"].remove(meal)
+        else:
+            return "couldnt find meal to delete", 404
+    else:
+        return "couldnt find mealplan in database", 404
+
+    result = mealplans.replace_one(mealplan_filter, mealplan)
+    if result.matched_count == 0:
+        return "no meals deleted", 404
+    else:
+        return dumps(mealplan), 200
+
+
+@app.route('/mealplans/<mealplan_id>', methods=["DELETE"])
+def delete_mealplan_by_id(mealplan_id):
+    mealplan_filter = {"_id": ObjectId(mealplan_id)}
+
+    delete_result = mealplans.delete_one(mealplan_filter)
     if delete_result.deleted_count == 0:
         return "deletion failed", 404
     else:
