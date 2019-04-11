@@ -26,14 +26,14 @@ def create_meal():
         "dateadded": datetime.datetime.now()
     }
     meal_id = meals.insert_one(new_meal).inserted_id
-    return dumps(meals.find_one({"_id": meal_id}))
+    return dumps(meals.find_one({"_id": meal_id})), 200
 
 
 @app.route('/meals', methods=["GET"])
 def get_meals():
     all_meals = meals.find()
     if all_meals.count() > 0:
-        return dumps(meals.find())
+        return dumps(meals.find()), 200
     else:
         return "Error: No meals found", 404
 
@@ -42,7 +42,10 @@ def get_meals():
 def get_meal_by_id(meal_id):
     print(meal_id)
     meal = meals.find_one({"_id": ObjectId(meal_id)})
-    return dumps(meal)
+    if meal != None:
+        return dumps(meal), 200
+    else:
+        return "Meal not found", 404
 
 
 @app.route('/meals/<meal_id>/', methods=["PUT"])
@@ -60,8 +63,11 @@ def add_ingredient_to_meal(meal_id):
     meal["ingredients"].append(ingredient)
     meal["totalcalories"] += float(ingredient["totalcalories"])
 
-    meals.replace_one(filter, meal)
-    return dumps(meal)
+    result = meals.replace_one(filter, meal)
+    if result.matched_count == 0:
+        return "no ingredients deleted", 404
+    else:
+        return dumps(meal), 200
 
 
 @app.route('/meals/<meal_id>/remove/<ing_id>', methods=["PUT"])
@@ -78,8 +84,11 @@ def remove_ingredient_from_meal(meal_id, ing_id):
             break
     meal["totalcalories"] -= float(cals)
 
-    meals.replace_one(meal_filter, meal)
-    return dumps(meal)
+    result = meals.replace_one(meal_filter, meal)
+    if result.matched_count == 0:
+        return "non ingredients deleted", 404
+    else:
+        return dumps(meal), 200
 
 
 @app.route('/meals/<meal_id>', methods=["DELETE"])
@@ -88,6 +97,6 @@ def delete_meal_by_id(meal_id):
 
     delete_result = meals.delete_one(meal_filter)
     if delete_result.deleted_count == 0:
-        return "deletion failed"
+        return "deletion failed", 404
     else:
-        return "deletion successful"
+        return "deletion successful", 200
