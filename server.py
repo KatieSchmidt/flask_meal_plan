@@ -15,24 +15,26 @@ grocerylists = DATABASE.grocerylists
 # flask config
 app = Flask(__name__)
 
-
 # meal routes
 
 #POST create a meals
-
-####### bug needs to check if the form fields are  empty or not
 @app.route('/meals', methods=["POST"])
 def create_meal():
-    new_meal = {
-        "ID": ObjectId(),
-        "username": request.form.get("username"),
-        "mealname": request.form.get('mealname'),
-        "totalcalories": float(0),
-        "ingredients": list(),
-        "dateadded": datetime.datetime.now()
-    }
-    meal_id = meals.insert_one(new_meal).inserted_id
-    return dumps(meals.find_one({"_id": meal_id})), 200
+    if len(request.form.get("user")) == 0:
+        return "user id is required"
+    elif len(request.form.get('mealname')) == 0:
+        return "mealname is required"
+    else:
+        new_meal = {
+            "user": ObjectId(request.form.get("user")),
+            "mealname": request.form.get('mealname'),
+            "totalcalories": float(0),
+            "ingredients": list(),
+            "dateadded": datetime.datetime.now()
+        }
+        meal_id = meals.insert_one(new_meal).inserted_id
+        return dumps(meals.find_one({"_id": meal_id})), 200
+
 
 # GET all meals
 @app.route('/meals', methods=["GET"])
@@ -43,7 +45,7 @@ def get_meals():
     else:
         return "Error: No meals found", 404
 
-#GET a meal byt its id
+#GET a meal by its id
 @app.route('/meals/<meal_id>/', methods=["GET"])
 def get_meal_by_id(meal_id):
     meal = meals.find_one({"_id": ObjectId(meal_id)})
@@ -118,7 +120,7 @@ def delete_meal_by_id(meal_id):
 @app.route('/mealplans', methods=["POST"])
 def create_mealplan():
     new_mealplan = {
-        "userid": ObjectId(request.form.get("userid")),
+        "user": ObjectId(request.form.get("user")),
         "planname": request.form.get('planname'),
         "totalcalories": float(0),
         "meals": list(),
