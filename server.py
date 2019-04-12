@@ -63,6 +63,7 @@ def get_meal_by_id(meal_id):
 
 @app.route('/meals/<meal_id>/', methods=["PUT"])
 def add_ingredient_to_meal(meal_id):
+    #validate ingredient inputs
     errors = dict()
     if len(request.form.get("ingredient")) == 0:
         errors["ingredient"] = "Ingredient field is required"
@@ -96,26 +97,34 @@ def add_ingredient_to_meal(meal_id):
 #PUT removes an ingredient from the meal
 # finds the meal by its id, then it cycles through each ingredient in the meals ingredient list. if the ingredients id is the same as the id in the url, it removes the calories and removes the ingredient from the list. then it replaces the meal  in the db
 
-##### bug needs to check if the meal exists first. it also needs to handle what happens if the ingredient isnt in the meals list of ingredients
 @app.route('/meals/<meal_id>/remove/<ing_id>', methods=["PUT"])
 def remove_ingredient_from_meal(meal_id, ing_id):
     meal_filter = {"_id": ObjectId(meal_id)}
     ing_filter = {"id": ObjectId(ing_id)}
     meal = meals.find_one(meal_filter)
-
-    cals = 0
-    for i in meal["ingredients"]:
-        if i["id"] == ObjectId(ing_id):
-            cals = i["totalcalories"]
-            meal["ingredients"].remove(i)
-            break
-    meal["totalcalories"] -= float(cals)
-
-    result = meals.replace_one(meal_filter, meal)
-    if result.matched_count == 0:
-        return "non ingredients deleted", 404
+    if meal != None:
+        cals = 0
+        inserted = False
+        for i in meal["ingredients"]:
+            if i["id"] == ObjectId(ing_id):
+                cals = i["calories"]
+                meal["ingredients"].remove(i)
+                inserted = True
+                break
+        if inserted == True:
+            meal["totalcalories"] -= float(cals)
+            result = meals.replace_one(meal_filter, meal)
+            if result.matched_count == 0:
+                return "non ingredients deleted", 404
+            else:
+                return dumps(meal), 200
+        else:
+            errors = dict()
+            errors["ingredient"] = "this ingredient wasnt in the meal"
     else:
-        return dumps(meal), 200
+        errors = dict()
+        errors["meal"] = "No meal was found"
+        return dumps(errors)
 
 # DELETE s meal by its id
 @app.route('/meals/<meal_id>', methods=["DELETE"])
