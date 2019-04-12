@@ -140,18 +140,25 @@ def delete_meal_by_id(meal_id):
 # meaplan routes
 
 #POST creates a mealplan
-####### bug needs to check and make sure the user id and the planname arent empty
 @app.route('/mealplans', methods=["POST"])
 def create_mealplan():
-    new_mealplan = {
-        "user": ObjectId(request.form.get("user")),
-        "planname": request.form.get('planname'),
-        "totalcalories": float(0),
-        "meals": list(),
-        "dateadded": datetime.datetime.now()
-    }
-    mealplan_id = mealplans.insert_one(new_mealplan).inserted_id
-    return dumps(mealplans.find_one({"_id": mealplan_id})), 200
+    errors = dict()
+    if len(request.form.get("user")) < 24:
+        errors["user"] = "User id must be 24 characters"
+    if len(request.form.get("planname")) == 0:
+        errors["planname"] = "planname field must be filled"
+    if len(errors) > 0:
+        return dumps(errors)
+    else:
+        new_mealplan = {
+            "user": ObjectId(request.form.get("user")),
+            "planname": request.form.get('planname'),
+            "totalcalories": float(0),
+            "meals": list(),
+            "dateadded": datetime.datetime.now()
+        }
+        mealplan_id = mealplans.insert_one(new_mealplan).inserted_id
+        return dumps(mealplans.find_one({"_id": mealplan_id})), 200
 
 #GET s all mealplans
 @app.route('/mealplans', methods=["GET"])
@@ -163,7 +170,7 @@ def get_mealplans():
         return "Error: No mealplans found", 404
 
 #GET s a mealplan by its id
-@app.route('/mealplans/<mealplan_id>/', methods=["GET"])
+@app.route('/mealplans/<mealplan_id>', methods=["GET"])
 def get_mealplan_by_id(mealplan_id):
     mealplan = mealplans.find_one({"_id": ObjectId(mealplan_id)})
     if mealplan != None:
@@ -190,7 +197,7 @@ def add_meal_to_mealplan(mealplan_id, meal_id):
             else:
                 return dumps(mealplan), 200
 
-#PUT removes a meal from its mealplan_id
+#PUT removes a meal from mealplan from its mealplan_id
 #checks to see if there is a mealplan by the ide in the url. if there is, it finds the meal. if the meal exists with the id, it removes the meal from the list of meals in the mealplan and removes the calories from the calories value.
 
 ####### bug need to check to make sure the meal is actually in the mealplan before trying to remove the calories and the meal
@@ -203,8 +210,11 @@ def remove_meal_from_mealplan(mealplan_id, meal_id):
     if mealplan != None:
         meal = meals.find_one(meal_filter)
         if meal != None:
-            mealplan["totalcalories"] -= float(meal["totalcalories"])
-            mealplan["meals"].remove(meal)
+            if meal in mealplan["meals"]:
+                mealplan["totalcalories"] -= float(meal["totalcalories"])
+                mealplan["meals"].remove(meal)
+            else:
+                return "that meal wasnt in the mealplan", 404
         else:
             return "couldnt find meal to delete", 404
     else:
