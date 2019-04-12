@@ -20,10 +20,14 @@ app = Flask(__name__)
 #POST create a meals
 @app.route('/meals', methods=["POST"])
 def create_meal():
-    if len(request.form.get("user")) == 0:
-        return "user id is required"
-    elif len(request.form.get('mealname')) == 0:
-        return "mealname is required"
+    errors = dict()
+    if len(request.form.get("user")) < 24:
+        errors["user"] = "user id is required to be 24 characters"
+    if len(request.form.get('mealname')) == 0:
+        errors["mealname"] = "mealname is required"
+
+    if len(errors) > 0:
+        return dumps(errors)
     else:
         new_meal = {
             "user": ObjectId(request.form.get("user")),
@@ -57,26 +61,37 @@ def get_meal_by_id(meal_id):
 # PUT adds ingredient to meal by meal id
 # finds meal by meal id. makes an ingredient and appends that to the meals ingredient list. then replaces the meal in the db with the updated meal.
 
-###### bug need to check and make sure the form fields arent empty
 @app.route('/meals/<meal_id>/', methods=["PUT"])
 def add_ingredient_to_meal(meal_id):
-    filter = {"_id": ObjectId(meal_id)}
-    meal = meals.find_one(filter)
-    ingredient = {
-        "id": ObjectId(),
-        "ingredient": request.form.get("ingredient"),
-        "totalcalories": request.form.get("totalcalories"),
-        "measureunit": request.form.get("measureunit"),
-        "measureunitquantity": request.form.get("measureunitquantity")
-    }
-    meal["ingredients"].append(ingredient)
-    meal["totalcalories"] += float(ingredient["totalcalories"])
-
-    result = meals.replace_one(filter, meal)
-    if result.matched_count == 0:
-        return "no ingredients deleted", 404
+    errors = dict()
+    if len(request.form.get("ingredient")) == 0:
+        errors["ingredient"] = "Ingredient field is required"
+    if len(request.form.get('calories')) == 0:
+        errors["calories"] = "Calories field is required"
+    if len(request.form.get('measureunit')) == 0:
+        errors["measureunit"] = "measureunit field is required"
+    if len(request.form.get('measureunitquantity')) == 0:
+            errors["measureunitquantity"] = "measureunitquantity field is required"
+    if len(errors) > 0:
+        return dumps(errors)
     else:
-        return dumps(meal), 200
+        meal_filter = {"_id": ObjectId(meal_id)}
+        meal = meals.find_one(meal_filter)
+        ingredient = {
+            "id": ObjectId(),
+            "ingredient": request.form.get("ingredient"),
+            "calories": request.form.get("calories"),
+            "measureunit": request.form.get("measureunit"),
+            "measureunitquantity": request.form.get("measureunitquantity")
+        }
+        meal["ingredients"].append(ingredient)
+        meal["totalcalories"] += float(ingredient["calories"])
+
+        result = meals.replace_one(meal_filter, meal)
+        if result.matched_count == 0:
+            return "no ingredients added", 404
+        else:
+            return dumps(meal), 200
 
 #PUT removes an ingredient from the meal
 # finds the meal by its id, then it cycles through each ingredient in the meals ingredient list. if the ingredients id is the same as the id in the url, it removes the calories and removes the ingredient from the list. then it replaces the meal  in the db
