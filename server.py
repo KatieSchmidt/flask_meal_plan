@@ -79,11 +79,11 @@ def add_ingredient_to_meal(meal_id):
         meal_filter = {"_id": ObjectId(meal_id)}
         meal = meals.find_one(meal_filter)
         ingredient = {
-            "id": ObjectId(),
+            "_id": ObjectId(),
             "ingredient": request.form.get("ingredient"),
-            "calories": request.form.get("calories"),
+            "calories": float(request.form.get("calories")),
             "measureunit": request.form.get("measureunit"),
-            "measureunitquantity": request.form.get("measureunitquantity")
+            "measureunitquantity": float(request.form.get("measureunitquantity"))
         }
         meal["ingredients"].append(ingredient)
         meal["totalcalories"] += float(ingredient["calories"])
@@ -97,16 +97,18 @@ def add_ingredient_to_meal(meal_id):
 #PUT removes an ingredient from the meal
 # finds the meal by its id, then it cycles through each ingredient in the meals ingredient list. if the ingredients id is the same as the id in the url, it removes the calories and removes the ingredient from the list. then it replaces the meal  in the db
 
+######## bug I updated the creation route so the models wont line up this needs to be fixed next
+
 @app.route('/meals/<meal_id>/remove/<ing_id>', methods=["PUT"])
 def remove_ingredient_from_meal(meal_id, ing_id):
     meal_filter = {"_id": ObjectId(meal_id)}
-    ing_filter = {"id": ObjectId(ing_id)}
+    ing_filter = {"_id": ObjectId(ing_id)}
     meal = meals.find_one(meal_filter)
     if meal != None:
         cals = 0
         inserted = False
         for i in meal["ingredients"]:
-            if i["id"] == ObjectId(ing_id):
+            if i["_id"] == ObjectId(ing_id):
                 cals = i["calories"]
                 meal["ingredients"].remove(i)
                 inserted = True
@@ -196,11 +198,12 @@ def add_meal_to_mealplan(mealplan_id, meal_id):
                 return "no meal added", 404
             else:
                 return dumps(mealplan), 200
+    else:
+        return "no mealplan found with that id", 404
 
 #PUT removes a meal from mealplan from its mealplan_id
 #checks to see if there is a mealplan by the ide in the url. if there is, it finds the meal. if the meal exists with the id, it removes the meal from the list of meals in the mealplan and removes the calories from the calories value.
 
-####### bug need to check to make sure the meal is actually in the mealplan before trying to remove the calories and the meal
 @app.route('/mealplans/<mealplan_id>/remove/<meal_id>', methods=["PUT"])
 def remove_meal_from_mealplan(mealplan_id, meal_id):
     mealplan_filter = {"_id": ObjectId(mealplan_id)}
@@ -242,10 +245,15 @@ def delete_mealplan_by_id(mealplan_id):
 #POST Creates a grocery list from a mealplan using the mealplan id.
 
 # it checks for a mealplan, if it exists, it makes an empty list. it looks through each meal in the mealplan. For each meal, it loops through the ingredients,  then checks if the list is empty, if its empty it creates an object with the grocery item info for the first ingredient. Otherwise, it loops through the ingredients in the grocerylist ands if the ingredient is already in there, if it is, it increments the quantity, otherwise it makes a new object and adds it to the list. after iterating through them all, it makes a dictionary and uses that to insert it into the db. then it returns the new grocery list.
+
 @app.route('/grocerylists/<mealplan_id>', methods=["POST"])
 def create_grocery_list(mealplan_id):
     mealplan_filter = {"_id": ObjectId(mealplan_id)}
+    grocerylist_filter = {"associatedmealplanid": ObjectId(mealplan_id)}
+
+    previous_grocerylist = grocerylists.find_one(grocerylist_filter)
     mealplan = mealplans.find_one(mealplan_filter)
+
     if mealplan != None:
         grocerylist = list()
         for meal in mealplan["meals"]:
@@ -254,14 +262,16 @@ def create_grocery_list(mealplan_id):
                 if len(grocerylist) > 0:
                     for item in grocerylist:
                         if item["ingredient"].lower() == ingredient["ingredient"].lower():
-                            item["measureunitquantity"] += float(
+                            item["quantity"] += float(
                                 ingredient["measureunitquantity"])
                             inserted = True
                             break
                     if inserted == False:
                         temp_item = {
+                            "_id": ObjectId(),
                             "ingredient": ingredient["ingredient"],
-                            "measureunitquantity": float(ingredient["measureunitquantity"])
+                            "quantity": float(ingredient["measureunitquantity"]),
+                            "measureunit": ingredient["measureunit"]
                         }
                         grocerylist.append(temp_item)
 
@@ -269,17 +279,26 @@ def create_grocery_list(mealplan_id):
                 else:
                     print("grocery list empty creating first item")
                     temp_item = {
+                        "_id": ObjectId(),
                         "ingredient": ingredient["ingredient"],
-                        "measureunitquantity": float(ingredient["measureunitquantity"])
+                        "quantity": float(ingredient["measureunitquantity"]),
+                        "measureunit": ingredient["measureunit"]
                     }
                     grocerylist.append(temp_item)
 
         grocerydict = dict()
-        for item in grocerylist:
-            grocerydict[item["ingredient"]] = item["measureunitquantity"]
+        grocerydict["associatedmealplanid"] = ObjectId(mealplan_id)
+        grocerydict["groceries"] = grocerylist
 
-        grocery_id = grocerylists.insert_one(grocerydict).inserted_id
-        return dumps(grocerylists.find_one({"_id": grocery_id})), 200
+        if previous_grocerylist != None:
+            result = grocerylists.replace_one(grocerylist_filter, grocerydict)
+            if result.matched_count == 0:
+                return "no grocerylist replaced", 404
+            else:
+                return dumps(grocerydict), 200
+        else:
+            grocery_id = grocerylists.insert_one(grocerydict).inserted_id
+            return dumps(grocerylists.find_one({"_id": grocery_id})), 200
     else:
         return "Mealplan not found, cant make grocery list", 404
 
