@@ -313,10 +313,10 @@ def get_grocerylists():
     else:
         return "Grocery list not found", 404
 
-#GET s specific grocery list using the grocery list id
-@app.route('/grocerylists/<grocerylist_id>', methods=["GET"])
-def get_grocerylist_by_id(grocerylist_id):
-    grocerylist = grocerylists.find_one({"_id": ObjectId(grocerylist_id)})
+#GET s specific grocery list using the mealplan id
+@app.route('/grocerylists/<mealplan_id>', methods=["GET"])
+def get_grocerylist_by_mealplan_id(mealplan_id):
+    grocerylist = grocerylists.find_one({"associatedmealplanid": ObjectId(mealplan_id)})
     if grocerylist != None:
         return dumps(grocerylist), 200
     else:
