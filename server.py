@@ -244,7 +244,7 @@ def delete_mealplan_by_id(mealplan_id):
 
 #POST Creates a grocery list from a mealplan using the mealplan id.
 
-# it checks for a mealplan, if it exists, it makes an empty list. it looks through each meal in the mealplan. For each meal, it loops through the ingredients,  then checks if the list is empty, if its empty it creates an object with the grocery item info for the first ingredient. Otherwise, it loops through the ingredients in the grocerylist ands if the ingredient is already in there, if it is, it increments the quantity, otherwise it makes a new object and adds it to the list. after iterating through them all, it makes a dictionary and uses that to insert it into the db. then it returns the new grocery list.
+# it checks for a mealplan, if it exists, it makes an empty list. it looks through each meal in the mealplan. For each meal, it loops through the ingredients,  then checks if the list is empty, if its empty it creates an object with the grocery item info for the first ingredient. Otherwise, it loops through the ingredients in the grocerylist ands if the ingredient is already in there, if it is, it increments the quantity, otherwise it makes a new object and adds it to the list. after iterating through them all, it makes a dictionary. it checks to see if a grocery ilst exists for associated mealplan. if it does, it replces it, otherwise it creates a new list
 
 @app.route('/grocerylists/<mealplan_id>', methods=["POST"])
 def create_grocery_list(mealplan_id):
@@ -323,18 +323,28 @@ def get_grocerylist_by_id(grocerylist_id):
         return "Grocery list not found", 404
 
 #PUT s deletes an item from a grocery list
-# it finds the grocery list with the id, then if the grocery list exists, it pops the item from the grocerylist. then it uses replace_one to replace the grocery list in the db. returns the new grocery list.
-@app.route('/grocerylists/<grocerylist_id>/<itemname>', methods=["PUT"])
-def remove_grocery_item_from_list(grocerylist_id, itemname):
-    list_filter = {"_id": ObjectId(grocerylist_id)}
+# it finds the grocery list with the mealplan id, then if the grocery list exists, it iterates over the groceries in the list. if the id matches the id in the url, it pops that item from the list and replaces the grocery list with the updated list, otherwise if none of the items in the list match the url id, it lets you know the item wasnt in the list. if the grocery list didnt exist to begin with, it lets you know the grocery list wasnt found.
+@app.route('/grocerylists/<mealplan_id>/<grocery_id>', methods=["PUT"])
+def remove_grocery_item_from_list(mealplan_id, grocery_id):
+    list_filter = {"associatedmealplanid": ObjectId(mealplan_id)}
     grocerylist = grocerylists.find_one(list_filter)
+
     if grocerylist != None:
-        removed_value = grocerylist.pop(itemname, None)
-        result = grocerylists.replace_one(list_filter, grocerylist)
-        if result.matched_count == 0:
-            return "no items deleted", 404
-        else:
-            return dumps(grocerylist), 200
+        inserted = False
+        index = 0
+        for item in grocerylist["groceries"]:
+            if item["_id"] == ObjectId(grocery_id):
+                removed_value = grocerylist["groceries"].pop(index)
+                if removed_value != None:
+                    result = grocerylists.replace_one(list_filter, grocerylist)
+                    if result.matched_count == 0:
+                        return "no items deleted", 404
+                    else:
+                        return dumps(grocerylist), 200
+            else:
+                index += 1
+        if inserted == False:
+            return "That item was not in the grocerylist", 404
     else:
         return "Grocery list not found", 404
 
