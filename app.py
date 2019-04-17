@@ -51,6 +51,7 @@ def create_meal():
 
 # GET all meals
 @app.route('/meals', methods=["GET"])
+@jwt_required
 def get_meals():
     all_meals = meals.find()
     if all_meals.count() > 0:
@@ -60,6 +61,7 @@ def get_meals():
 
 #GET a meal by its id
 @app.route('/meals/<meal_id>/', methods=["GET"])
+@jwt_required
 def get_meal_by_id(meal_id):
     meal = meals.find_one({"_id": ObjectId(meal_id)})
     if meal != None:
@@ -71,6 +73,7 @@ def get_meal_by_id(meal_id):
 # finds meal by meal id. makes an ingredient and appends that to the meals ingredient list. then replaces the meal in the db with the updated meal.
 
 @app.route('/meals/<meal_id>/', methods=["PUT"])
+@jwt_required
 def add_ingredient_to_meal(meal_id):
     #validate ingredient inputs
     errors = dict()
@@ -109,6 +112,7 @@ def add_ingredient_to_meal(meal_id):
 ######## bug I updated the creation route so the models wont line up this needs to be fixed next
 
 @app.route('/meals/<meal_id>/remove/<ing_id>', methods=["PUT"])
+@jwt_required
 def remove_ingredient_from_meal(meal_id, ing_id):
     meal_filter = {"_id": ObjectId(meal_id)}
     ing_filter = {"_id": ObjectId(ing_id)}
@@ -139,6 +143,7 @@ def remove_ingredient_from_meal(meal_id, ing_id):
 
 # DELETE s meal by its id
 @app.route('/meals/<meal_id>', methods=["DELETE"])
+@jwt_required
 def delete_meal_by_id(meal_id):
     meal_filter = {"_id": ObjectId(meal_id)}
 
@@ -152,6 +157,7 @@ def delete_meal_by_id(meal_id):
 
 #POST creates a mealplan
 @app.route('/mealplans', methods=["POST"])
+@jwt_required
 def create_mealplan():
     errors = dict()
     if len(request.form.get("user")) < 24:
@@ -173,6 +179,7 @@ def create_mealplan():
 
 #GET s all mealplans
 @app.route('/mealplans', methods=["GET"])
+@jwt_required
 def get_mealplans():
     all_mealplans = mealplans.find()
     if all_mealplans.count() > 0:
@@ -192,6 +199,7 @@ def get_mealplan_by_id(mealplan_id):
 #PUT adds a meal to the mealplan
 # finds mealplan by id, if it exists, check to see if meal exists, if it does, add it to the mealplans list of meals and add the meals calories to the total calories
 @app.route('/mealplans/<mealplan_id>/<meal_id>', methods=["PUT"])
+@jwt_required
 def add_meal_to_mealplan(mealplan_id, meal_id):
     mealplan_filter = {"_id": ObjectId(mealplan_id)}
     meal_filter = {"_id": ObjectId(meal_id)}
@@ -214,6 +222,7 @@ def add_meal_to_mealplan(mealplan_id, meal_id):
 #checks to see if there is a mealplan by the ide in the url. if there is, it finds the meal. if the meal exists with the id, it removes the meal from the list of meals in the mealplan and removes the calories from the calories value.
 
 @app.route('/mealplans/<mealplan_id>/remove/<meal_id>', methods=["PUT"])
+@jwt_required
 def remove_meal_from_mealplan(mealplan_id, meal_id):
     mealplan_filter = {"_id": ObjectId(mealplan_id)}
     meal_filter = {"_id": ObjectId(meal_id)}
@@ -240,6 +249,7 @@ def remove_meal_from_mealplan(mealplan_id, meal_id):
 
 #DELETE s a mealplan by its id
 @app.route('/mealplans/<mealplan_id>', methods=["DELETE"])
+@jwt_required
 def delete_mealplan_by_id(mealplan_id):
     mealplan_filter = {"_id": ObjectId(mealplan_id)}
 
@@ -256,6 +266,7 @@ def delete_mealplan_by_id(mealplan_id):
 # it checks for a mealplan, if it exists, it makes an empty list. it looks through each meal in the mealplan. For each meal, it loops through the ingredients,  then checks if the list is empty, if its empty it creates an object with the grocery item info for the first ingredient. Otherwise, it loops through the ingredients in the grocerylist ands if the ingredient is already in there, if it is, it increments the quantity, otherwise it makes a new object and adds it to the list. after iterating through them all, it makes a dictionary. it checks to see if a grocery ilst exists for associated mealplan. if it does, it replces it, otherwise it creates a new list
 
 @app.route('/grocerylists/<mealplan_id>', methods=["POST"])
+@jwt_required
 def create_grocery_list(mealplan_id):
     mealplan_filter = {"_id": ObjectId(mealplan_id)}
     grocerylist_filter = {"associatedmealplanid": ObjectId(mealplan_id)}
@@ -315,6 +326,7 @@ def create_grocery_list(mealplan_id):
 
 #gets all grocery lists
 @app.route('/grocerylists', methods=["GET"])
+@jwt_required
 def get_grocerylists():
     grocerylist = grocerylists.find()
     if grocerylist != None:
@@ -324,6 +336,7 @@ def get_grocerylists():
 
 #GET s specific grocery list using the mealplan id
 @app.route('/grocerylists/<mealplan_id>', methods=["GET"])
+@jwt_required
 def get_grocerylist_by_mealplan_id(mealplan_id):
     grocerylist = grocerylists.find_one({"associatedmealplanid": ObjectId(mealplan_id)})
     if grocerylist != None:
@@ -334,6 +347,7 @@ def get_grocerylist_by_mealplan_id(mealplan_id):
 #PUT s deletes an item from a grocery list
 # it finds the grocery list with the mealplan id, then if the grocery list exists, it iterates over the groceries in the list. if the id matches the id in the url, it pops that item from the list and replaces the grocery list with the updated list, otherwise if none of the items in the list match the url id, it lets you know the item wasnt in the list. if the grocery list didnt exist to begin with, it lets you know the grocery list wasnt found.
 @app.route('/grocerylists/<mealplan_id>/<grocery_id>', methods=["PUT"])
+@jwt_required
 def remove_grocery_item_from_list(mealplan_id, grocery_id):
     list_filter = {"associatedmealplanid": ObjectId(mealplan_id)}
     grocerylist = grocerylists.find_one(list_filter)
@@ -359,6 +373,7 @@ def remove_grocery_item_from_list(mealplan_id, grocery_id):
 
 # DELETES a grocery list by its id
 @app.route('/grocerylists/<grocerylist_id>', methods=["DELETE"])
+@jwt_required
 def delete_grocerylist_by_id(grocerylist_id):
     grocerylist_filter = {"_id": ObjectId(grocerylist_id)}
 
