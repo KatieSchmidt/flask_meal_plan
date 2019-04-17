@@ -3,6 +3,8 @@ from flask import request
 from flask import Flask
 from bson.json_util import dumps
 from bson.objectid import ObjectId
+from flask_jwt_extended import JWTManager
+from flask_bcrypt import Bcrypt
 import datetime
 import pprint
 
@@ -11,10 +13,11 @@ DATABASE = MongoClient('localhost', 27017)["go_meals"]
 meals = DATABASE.meals
 mealplans = DATABASE.mealplans
 grocerylists = DATABASE.grocerylists
+users = DATABASE.users
 
 # flask config
 app = Flask(__name__)
-
+bcrypt = Bcrypt(app)
 # meal routes
 
 #POST create a meals
@@ -358,3 +361,22 @@ def delete_grocerylist_by_id(grocerylist_id):
         return "deletion failed", 404
     else:
         return "deletion successful", 200
+
+#user routes
+
+@app.route('/users/register', methods=["POST"])
+def register():
+    nonhashed_password = request.form.get('password')
+    hashed = bcrypt.generate_password_hash(nonhashed_password)
+    email = request.form.get('email')
+    new_user = {
+        "name": request.form.get("name"),
+        "password": hashed,
+        "email": email
+    }
+    returned_user = users.find_one({"email": email})
+    if returned_user != None:
+        return "email already in use", 500
+    else:
+        user_id = users.insert_one(new_user).inserted_id
+        return dumps(users.find_one({"_id": user_id})), 200
