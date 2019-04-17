@@ -5,7 +5,7 @@ from bson.json_util import dumps
 from bson.objectid import ObjectId
 from flask_jwt_extended import (
     JWTManager, jwt_required, create_access_token,
-    get_jwt_identity
+    get_jwt_identity, get_raw_jwt
 )
 from flask_bcrypt import Bcrypt
 import datetime
@@ -27,10 +27,11 @@ jwt = JWTManager(app)
 
 #POST create a meals
 @app.route('/meals', methods=["POST"])
+@jwt_required
 def create_meal():
+    jot = get_raw_jwt()
+    identity = jot["identity"]
     errors = dict()
-    if len(request.form.get("user")) < 24:
-        errors["user"] = "user id is required to be 24 characters"
     if len(request.form.get('mealname')) == 0:
         errors["mealname"] = "mealname is required"
 
@@ -38,7 +39,7 @@ def create_meal():
         return dumps(errors)
     else:
         new_meal = {
-            "user": ObjectId(request.form.get("user")),
+            "user": ObjectId(identity),
             "mealname": request.form.get('mealname'),
             "totalcalories": float(0),
             "ingredients": list(),
@@ -391,12 +392,13 @@ def login():
     user_email = request.form.get("email")
     user_password = request.form.get("password")
     db_user = users.find_one({"email": user_email})
+    db_user_id = str(db_user["_id"])
     if db_user != None:
         if bcrypt.check_password_hash(db_user["password"], user_password) == True:
-            jot = create_access_token(identity=dumps(db_user))
+            jot = create_access_token(identity=db_user_id)
             response_item = {
             "success": True,
-            "token": jot
+            "token": "Bearer " + jot
             }
             return dumps(response_item), 200
         else:
