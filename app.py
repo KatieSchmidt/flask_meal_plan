@@ -3,7 +3,10 @@ from flask import request
 from flask import Flask
 from bson.json_util import dumps
 from bson.objectid import ObjectId
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import (
+    JWTManager, jwt_required, create_access_token,
+    get_jwt_identity
+)
 from flask_bcrypt import Bcrypt
 import datetime
 import pprint
@@ -18,6 +21,8 @@ users = DATABASE.users
 # flask config
 app = Flask(__name__)
 bcrypt = Bcrypt(app)
+app.config['JWT_SECRET_KEY'] = 'This-secret-will-be-secret-later'
+jwt = JWTManager(app)
 # meal routes
 
 #POST create a meals
@@ -380,3 +385,19 @@ def register():
     else:
         user_id = users.insert_one(new_user).inserted_id
         return dumps(users.find_one({"_id": user_id})), 200
+
+@app.route('/users/login', methods=["POST"])
+def login():
+    user_email = request.form.get("email")
+    user_password = request.form.get("password")
+    db_user = users.find_one({"email": user_email})
+    if db_user != None:
+        if bcrypt.check_password_hash(db_user["password"], user_password) == True:
+            jot = create_access_token(identity=dumps(db_user))
+            response_item = {
+            "success": True,
+            "token": jot
+            }
+            return dumps(response_item), 200
+        else:
+            return "invalid password email combination", 500
