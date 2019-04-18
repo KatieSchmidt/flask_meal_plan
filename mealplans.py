@@ -16,16 +16,23 @@ mealplans_api = Blueprint("mealplans_api", __name__)
 @mealplans_api.route('/mealplans', methods=["POST"])
 @jwt_required
 def create_mealplan():
+    jot = get_raw_jwt()
+    identity = ObjectId(jot["identity"])
+    mealplan_filter = {"user": identity}
     errors = dict()
-    if len(request.form.get("user")) < 24:
-        errors["user"] = "User id must be 24 characters"
     if len(request.form.get("planname")) == 0:
         errors["planname"] = "planname field must be filled"
+        
+    users_mealplans = mealplans.find(mealplan_filter)
+    for mealplan in users_mealplans:
+        if mealplan["planname"].lower() == request.form.get('planname').lower():
+            errors["planname"] = "this planname already exists"
     if len(errors) > 0:
         return dumps(errors)
+
     else:
         new_mealplan = {
-            "user": ObjectId(request.form.get("user")),
+            "user": identity,
             "planname": request.form.get('planname'),
             "totalcalories": float(0),
             "meals": list(),
