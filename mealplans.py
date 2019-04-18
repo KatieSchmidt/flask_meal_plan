@@ -56,10 +56,16 @@ def get_current_users_mealplans():
 
 #GET s a mealplan by its id
 @mealplans_api.route('/mealplans/<mealplan_id>', methods=["GET"])
+@jwt_required
 def get_mealplan_by_id(mealplan_id):
+    jot = get_raw_jwt()
+    identity = ObjectId(jot["identity"])
     mealplan = mealplans.find_one({"_id": ObjectId(mealplan_id)})
     if mealplan != None:
-        return dumps(mealplan), 200
+        if mealplan["user"] == identity:
+            return dumps(mealplan), 200
+        else:
+            return "thats not your mealplan!", 403
     else:
         return "Mealplan not found", 404
 
