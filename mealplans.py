@@ -105,6 +105,8 @@ def add_meal_to_mealplan(mealplan_id, meal_id):
 @mealplans_api.route('/mealplans/<mealplan_id>/remove/<meal_id>', methods=["PUT"])
 @jwt_required
 def remove_meal_from_mealplan(mealplan_id, meal_id):
+    jot = get_raw_jwt()
+    identity = ObjectId(jot["identity"])
     mealplan_filter = {"_id": ObjectId(mealplan_id)}
     meal_filter = {"_id": ObjectId(meal_id)}
 
@@ -112,11 +114,14 @@ def remove_meal_from_mealplan(mealplan_id, meal_id):
     if mealplan != None:
         meal = meals.find_one(meal_filter)
         if meal != None:
-            if meal in mealplan["meals"]:
-                mealplan["totalcalories"] -= float(meal["totalcalories"])
-                mealplan["meals"].remove(meal)
+            if meal["user"] == identity and mealplan["user"] == identity:
+                if meal in mealplan["meals"]:
+                    mealplan["totalcalories"] -= float(meal["totalcalories"])
+                    mealplan["meals"].remove(meal)
+                else:
+                    return "that meal wasnt in the mealplan", 404
             else:
-                return "that meal wasnt in the mealplan", 404
+                return "you arent the owner of one of these objects", 403
         else:
             return "couldnt find meal to delete", 404
     else:
