@@ -137,10 +137,15 @@ def remove_meal_from_mealplan(mealplan_id, meal_id):
 @mealplans_api.route('/mealplans/<mealplan_id>', methods=["DELETE"])
 @jwt_required
 def delete_mealplan_by_id(mealplan_id):
+    jot = get_raw_jwt()
+    identity = ObjectId(jot["identity"])
     mealplan_filter = {"_id": ObjectId(mealplan_id)}
-
-    delete_result = mealplans.delete_one(mealplan_filter)
-    if delete_result.deleted_count == 0:
-        return "deletion failed", 404
+    mealplan = mealplans.find_one(mealplan_filter)
+    if mealplan["user"] == identity:
+        delete_result = mealplans.delete_one(mealplan_filter)
+        if delete_result.deleted_count == 0:
+            return "deletion failed", 404
+        else:
+            return "deletion successful", 200
     else:
-        return "deletion successful", 200
+        "you dont have access to this mealplan", 403
