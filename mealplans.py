@@ -22,7 +22,7 @@ def create_mealplan():
     errors = dict()
     if len(request.form.get("planname")) == 0:
         errors["planname"] = "planname field must be filled"
-        
+
     users_mealplans = mealplans.find(mealplan_filter)
     for mealplan in users_mealplans:
         if mealplan["planname"].lower() == request.form.get('planname').lower():
@@ -44,10 +44,13 @@ def create_mealplan():
 #GET s all mealplans
 @mealplans_api.route('/mealplans', methods=["GET"])
 @jwt_required
-def get_mealplans():
-    all_mealplans = mealplans.find()
+def get_current_users_mealplans():
+    jot = get_raw_jwt()
+    identity = ObjectId(jot["identity"])
+    mealplan_filter = {"user": identity}
+    all_mealplans = mealplans.find(mealplan_filter)
     if all_mealplans.count() > 0:
-        return dumps(mealplans.find()), 200
+        return dumps(all_mealplans), 200
     else:
         return "Error: No mealplans found", 404
 
