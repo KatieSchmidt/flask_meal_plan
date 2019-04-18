@@ -10,6 +10,7 @@ import datetime
 
 DATABASE = MongoClient('localhost', 27017)["go_meals"]
 mealplans = DATABASE["mealplans"]
+meals = DATABASE["meals"]
 mealplans_api = Blueprint("mealplans_api", __name__)
 
 #POST creates a mealplan
@@ -74,20 +75,27 @@ def get_mealplan_by_id(mealplan_id):
 @mealplans_api.route('/mealplans/<mealplan_id>/<meal_id>', methods=["PUT"])
 @jwt_required
 def add_meal_to_mealplan(mealplan_id, meal_id):
+    jot = get_raw_jwt()
+    identity = ObjectId(jot["identity"])
     mealplan_filter = {"_id": ObjectId(mealplan_id)}
     meal_filter = {"_id": ObjectId(meal_id)}
     mealplan = mealplans.find_one(mealplan_filter)
     if mealplan != None:
         meal = meals.find_one(meal_filter)
         if meal != None:
-            mealplan["meals"].append(meal)
-            mealplan["totalcalories"] += float(meal["totalcalories"])
+            if meal["user"] == identity and mealplan["user"] == identity:
+                mealplan["meals"].append(meal)
+                mealplan["totalcalories"] += float(meal["totalcalories"])
 
-            result = mealplans.replace_one(mealplan_filter, mealplan)
-            if result.matched_count == 0:
-                return "no meal added", 404
+                result = mealplans.replace_one(mealplan_filter, mealplan)
+                if result.matched_count == 0:
+                    return "no meal added", 404
+                else:
+                    return dumps(mealplan), 200
             else:
-                return dumps(mealplan), 200
+                return "You dont have access to a meal or a mealplan"
+        else:
+            return "meal doesnt exist", 404
     else:
         return "no mealplan found with that id", 404
 
